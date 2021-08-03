@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import preloader from '../../img/preloader.svg';
 import c from './ItemsStyle.module.css';
 import ItemCard from './ItemCard';
@@ -7,23 +6,29 @@ import ItemCard from './ItemCard';
 
 const Items = () => {
 	let [isDataLoaded, setIsDataLoaded] = useState(false);
-	let [errors, setErrors] = useState([]);
+	let [error, setError] = useState('');
 	let [items, setItems] = useState([]);
 
-	useEffect(() => {
-		axios
-			.get('https://cre-api.kufar.by/items-search/v1/engine/v1/search/rendered-paginated?lang=ru&size=3')
-			.then(res => {
-				setItems(res.data.ads)
+	
+	async function getData() {
+		try {
+			const res = await fetch('https://cre-api.kufar.by/items-search/v1/engine/v1/search/rendered-paginated?lang=ru&size=3')
+
+			if (!res.ok) {
+				console.log('failed')
+				throw new Error("HTTP status " + res.status);
+			} else {
+				let json = await res.json();
+				setItems(json.ads)
 				setIsDataLoaded(true)
-			})
-			.catch(e => {
-				// console.log(e.response.data.error.message)
-				setErrors([...errors, e.response.data.error.message])
 			}
-				
-				// setIsLoadingFailed(true)
-			)
+		} catch (err) {
+			setError(err)
+		}
+	}
+
+	useEffect(() => {
+		getData()
 	}, [])
 
 
@@ -32,7 +37,7 @@ const Items = () => {
 	}
 
 	const ErrorBlock = () => {
-		return <div className={c.error}><p>{errors[0]}</p></div>
+		return <div className={c.error}><p>Failed to Load</p></div>
 	}
 
 
@@ -41,7 +46,6 @@ const Items = () => {
 			<ItemCard
 				date={card.list_time} key={card.ad_id} subject={card.subject}
 				price={card.price_byn} params={card.ad_parameters}
-
 			/>
 		)
 
@@ -49,8 +53,8 @@ const Items = () => {
 	return (
 		<>
 			{isDataLoaded && <ul className={c.itemsList}>{itemCards}</ul>}
-			{!isDataLoaded && !errors[0] && <Preloader />}
-			{errors[0]  && <ErrorBlock/>}
+			{!isDataLoaded && !error && <Preloader />}
+			{error && <ErrorBlock/>}
 		</>
 	)
 
